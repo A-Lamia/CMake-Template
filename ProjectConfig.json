@@ -1,0 +1,11 @@
+[
+  {
+    "output": "./build",
+    "source": "./",
+    "c_compiler": "Clang",
+    "cxx_compiler": "Clang",
+    "linker": "$env:LLVM_ROOT",
+    "genorator": "Ninja",
+    "exe_name": "PlayGround"
+  }
+]
