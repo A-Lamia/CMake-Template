@@ -119,18 +119,19 @@ function Redo-Project($Type)
 function New-Project($Type)
 {
   $source_dir = $Global:settings.source
-  $output = $Global:Settings.output
+  $output = $Global:settings.output
   
   $c_compiler = ($Global:settings.c_compiler -ne "") ? "-DCMAKE_C_COMPILER="+$Global:settings.c_compiler : ""
   $cxx_compiler = ($Global:settings.cxx_compiler -ne "") ? "-DCMAKE_CXX_COMPILER="+$Global:settings.cxx_compiler : ""
   $linker = ( $Global:settings.linker -ne "" ) ? "-DCMAKE_LINKER="+$Global:settings.linker : ""
   $tools = "$c_compiler $cxx_compiler $linker"
   
-  $c_version = ($Global:settings.c_version -ne "") ? "-DCMAKE_C_STANDARD"+$Global:settings.c_version : "" 
-  $cxx_version = ($Global:settings.cxx_version -ne "") ? "-DCMAKE_CXX_STANDARD"+$Global:settings.cxx_version : "" 
+  $c_version = ($Global:settings.c_version -ne "") ? "-DCMAKE_C_STANDARD="+$Global:settings.c_version : ""
+  $cxx_version = ($Global:settings.cxx_version -ne "") ? "-DCMAKE_CXX_STANDARD="+$Global:settings.cxx_version : ""
   $version = "$c_version $cxx_version"
   
-  $genorator = ($settings.genorator -ne "" ) ? "-G " + $settings.genorator : ""
+  $genorator = ($Global:settings.genorator -ne "" ) ? ("-G " + $Global:settings.genorator) : ""
+  Write-Host $Global:settings.c_version
   
   $command 
   switch ($Type.ToLower())
@@ -144,6 +145,7 @@ function New-Project($Type)
       }
       
       $command = "cmake $genorator -S $source_dir -B $output/$folder $tools $version"
+      Write-Host $command
       Invoke-Expression $command
     }
     
