@@ -77,7 +77,7 @@ function New-OutputDir()
 
 function Initialize-Project()
 {
-  Get-Settings $true
+  Set-Settings $true
 }
 
 
@@ -197,7 +197,7 @@ function Build-Project($Type,$Run)
       Invoke-Expression $command
       if ($Run)
       {
-        Open-Executable($mode['d'])
+        Open-Executable $mode['d'] 
       }
     }
     $mode['rd']
@@ -206,7 +206,7 @@ function Build-Project($Type,$Run)
       Invoke-Expression $command
       if ($Run)
       {
-        Open-Executable($mode['rd'])
+        Open-Executable $mode['rd'] 
       }
     }   
     $mode['r']
@@ -215,7 +215,7 @@ function Build-Project($Type,$Run)
       Invoke-Expression $command
       if ($Run)
       {
-        Open-Executable($mode['r'])
+        Open-Executable $mode['r'] 
       }
     }    
     $mode['rm']
@@ -224,7 +224,7 @@ function Build-Project($Type,$Run)
       Invoke-Expression $command
       if ($Run)
       {
-        Open-Executable($mode['rm'])
+        Open-Executable $mode['rm']
       }
     }
   }  
@@ -233,33 +233,49 @@ function Build-Project($Type,$Run)
 
 function Open-Executable($Type)
 {
-  if (!(Get-Dir "./" "build"))
+  function Get-Path($dir)
   {
-    Write-Host "No build directory was found."
-    return
+    $name = $Global:settings.exe_name
+    $build_dir = $Global:settings.output + "/$dir"
+    $path = "$build_dir/$name"
+
+    if(Test-Path $path)
+    {
+      return $path
+    } else
+    {
+      $files = Get-ChildItem -Path $build_dir -Recurse
+      foreach($file in $files)
+      {
+        if($file.Name -Match "$name$")
+        {
+          return $file
+        }
+      }
+    }
+    return "Write-Host 'Executable could not be found'"
   }
-  $settings = Get-Settings
-  $name = $settings.exe_name
+  
   switch ($Type.ToLower())
   {
     $mode['d']
     {
-      $command = "./build/Debug/$name.exe"     
+      $command = Get-Path "Debug"     
       Invoke-Expression $command
     }
     $mode['rd']
     {
-      $command = "./build/Release_Debug/$name.exe"     
+      $command = Get-Path "Release-Debug"     
       Invoke-Expression $command
     }
     $mode['r']
     {
-      $command = "./build/Release/$name.exe"     
+      $command = Get-Path "Release"     
       Invoke-Expression $command
     }
     $mode['rm']
     {
-      $command = "./build/Release_Mini/$name.exe"     
+      $command = Get-Path "Release-Mini"     
       Invoke-Expression $command
     }
       
