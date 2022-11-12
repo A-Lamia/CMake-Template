@@ -80,19 +80,39 @@ function Initialize-Project()
   Get-Settings $true
 }
 
-function Redo-Project()
+
+function Redo-Project($Type)
 {
-  $settings = Get-Settings
-  $output_dir = $settings.output.split("./")
-  $dir = Get-ChildItem ".\" -Directory 
-  if ($dir.Name -eq $output_dir)
+  $output = $Global:Settings.output
+  
+  switch ($Type.ToLower())
   {
-    Remove-Item -Path .\build -Force -Recurse
-    Initialize-Project
-  } else
-  {
-    Write-Host "Nothing to Reset."
-  }
+    "project"
+    {
+      $command = "Remove-Item $output/*"
+      Invoke-Expression $command
+    }
+    $mode["d"]
+    {
+      $command = "Remove-Item $output/Debug/*"
+      Invoke-Expression $command
+    }
+    $mode["rd"]
+    {
+      $command = "Remove-Item $output/Release_Debug/*"
+      Invoke-Expression $command
+    }
+    $mode["r"]
+    {
+      $command = "Remove-Item $output/Release/*"
+      Invoke-Expression $command
+    }
+    $mode["rm"]
+    {
+      $command = "Remove-Item $output/Release_Mini/*"
+      Invoke-Expression $command
+    }
+  }  
 }
 
 
@@ -255,9 +275,9 @@ switch ($Action.ToLower())
   {
     Initialize-Project 
   }
-  "reset"
+  "clean"
   {
-    Redo-Project
+    Redo-Project $Type
   }
   "create"
   {
