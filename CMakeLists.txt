@@ -6,14 +6,6 @@ if(DEFINED ENV{CPM_CACHE})
   set(CPM_SOURCE_CACHE "$ENV{CPM_CACHE}")
 endif()
 
-if(DEFINED ENV{LLVM_ROOT})
-  set(CMAKE_C_COMPILER "$ENV{LLVM_ROOT}/clang.exe")
-  set(CMAKE_CXX_COMPILER "$ENV{LLVM_ROOT}/clang.exe")
-  set(CMAKE_LINKER "$ENV{LLVM_ROOT}/lld-link.exe")
-  set(CMAKE_C_COMPILER_ID Clang)
-  set(CMAKE_CXX_COMPILER_ID Clang)
-endif()
-
 project(PlayGround LANGUAGES C CXX)
 
 add_executable(${PROJECT_NAME} src/main.cpp)

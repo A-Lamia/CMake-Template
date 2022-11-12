@@ -4,6 +4,43 @@ param(
   [switch]$Run
 )
 
+
+function Get-Settings()
+{
+  $settings = Get-Content .\ProjectConfig.json -Raw | ConvertFrom-Json
+  return $settings
+}
+
+
+function Set-Settings($overide = $false)
+{
+  if (( $null -eq $Global:settings ) -or ( $overide -eq $true ))
+  {
+    $json = (Get-Content .\ProjectConfig.json -Raw | ConvertFrom-Json) 
+  
+    $Global:settings = @{
+      'output' = $json.output.replace("\", "/").replace(" ", "_");  
+      'source' = $json.source.replace("\", "/").replace(" ", "' '");
+      'c_version' = $json.c_version;
+      'cxx_version' = $json.cxx_version;
+      'c_compiler' = $json.c_compiler.replace("\", "/").replace(" ", "' '");
+      'cxx_compiler' = $json.cxx_compiler.replace("\", "/").replace(" ", "' '");
+      'linker' = $json.linker.replace("\", "/").replace(" ", "' '");
+      'genorator' = $json.genorator;
+      'exe_name' = $json.exe_name;
+      'CPM_CACHE' = $json.CPM_CACHE.replace("\", "/").replace(" ", "' '")
+    }
+    
+    Write-Output $Global:settings
+    if($Global:settings.CPM_CACHE -ne "")
+    {
+      $env:CPM_CACHE = $settings.CPM_CACHE
+    }
+  }
+}
+
+Set-Settings
+
 $mode = @{ 
   'd' = 'debug';
   'rd' = 'release-debug';
@@ -12,38 +49,35 @@ $mode = @{
 }
 
 
-function Get-Settings()
-{
-  $settings = Get-Content .\ProjectConfig.json -Raw | ConvertFrom-Json
-  return $settings
-}
-
-# [TODO]: Write a function that dettects levels of directories and creates them.
-
 function Get-Dir($path, $folder)
 {
-  $dir = Get-ChildItem $path -Directory 
-  if ($dir.Name -eq $folder)
+  if (Test-Path $output)
   {
-    return $true 
+    $dir = Get-ChildItem $path -Directory 
+    if ($dir.Name -eq $folder)
+    {
+      return $true 
+    }
   }
   return $false
 }
 
 
+function New-OutputDir()
+{
+  $output = $Global:Settings.output
+  
+  if(Get-Dir ".\", $output)
+  {
+    $routput = $output
+    New-Item $routput -ItemType Directory 
+  }
+}
+
+
 function Initialize-Project()
 {
-  $settings = Get-Settings
-  $output_dir = $settings.output
-  if (Get-Dir "./" $output_dir)
-  {
-    Write-Host "Build directory already exsists."
-  } else
-  {
-    New-Item -Path .\ -Name $output_dir -ItemType Directory 
-    New-Item -Path .\build -Name "Debug" -ItemType Directory
-    New-Item -Path .\build -Name "Release" -ItemType Directory 
-  }
+  Get-Settings $true
 }
 
 function Redo-Project()
@@ -64,17 +98,18 @@ function Redo-Project()
 
 function New-Project($Type)
 {
-  if(!( Get-Dir "./" "build" ))
-  {
-    New-Item -Path .\ -Name "build" -ItemType Directory 
-  } 
+  $source_dir = $Global:settings.source
+  $output = $Global:Settings.output
   
-  $settings = Get-Settings  
-  $source_dir = $settings.source
-  $output_dir = $settings.output
-  # $c_compiler = ($settings.c_compiler -ne "") ? "-D"
-  # $cxx_compiler = $settings.cxx_compiler
-  # $linker = $settings.linker
+  $c_compiler = ($Global:settings.c_compiler -ne "") ? "-DCMAKE_C_COMPILER="+$Global:settings.c_compiler : ""
+  $cxx_compiler = ($Global:settings.cxx_compiler -ne "") ? "-DCMAKE_CXX_COMPILER="+$Global:settings.cxx_compiler : ""
+  $linker = ( $Global:settings.linker -ne "" ) ? "-DCMAKE_LINKER="+$Global:settings.linker : ""
+  $tools = "$c_compiler $cxx_compiler $linker"
+  
+  $c_version = ($Global:settings.c_version -ne "") ? "-DCMAKE_C_STANDARD"+$Global:settings.c_version : "" 
+  $cxx_version = ($Global:settings.cxx_version -ne "") ? "-DCMAKE_CXX_STANDARD"+$Global:settings.cxx_version : "" 
+  $version = "$c_version $cxx_version"
+  
   $genorator = ($settings.genorator -ne "" ) ? "-G " + $settings.genorator : ""
   
   $command 
@@ -83,48 +118,48 @@ function New-Project($Type)
     $mode['d']  
     {
       $folder = "Debug"
-      if (!( Get-Dir "./build" $folder ))
+      if (!( Get-Dir $output $folder ))
       {
-        New-Item -Path ./build -Name $folder -ItemType Directory 
+        New-Item -Path "$output/$folder"  -ItemType Directory 
       }
       
-      $command = "cmake $genorator -S $source_dir -B $output_dir/$folder"
+      $command = "cmake $genorator -S $source_dir -B $output/$folder $tools $version"
       Invoke-Expression $command
     }
     
     $mode['rd']
     {
       $folder = "Release_Debug"
-      if (!(Get-Dir "./build" $folder))
+      if (!(Get-Dir $output $folder))
       {
         Write-Host "Did i run?"
-        New-Item -Path ./build -Name $folder -ItemType Directory 
+        New-Item -Path "$output/$folder"  -ItemType Directory 
       }
       
-      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='RelWIthDebInfo' -S $source_dir -B $output_dir/$folder"
+      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='RelWIthDebInfo' -S $source_dir -B $output/$folder $tools $version"
       Invoke-Expression $command
     }
     
     $mode['r']
     {
       $folder = "Release"
-      if (!(Get-Dir "./build" $folder))
+      if (!(Get-Dir $output $folder))
       {
-        New-Item -Path ./build -Name $folder -ItemType Directory 
+        New-Item -Path "$output/$folder"  -ItemType Directory 
       }
       
-      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='Release' -S $source_dir -B $output_dir/$folder"
+      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='Release' -S $source_dir -B $output/$folder $tools $version"
       Invoke-Expression $command
     }
     $mode['rm']
     {
       $folder = "Release_Mini"
-      if (!(Get-Dir "./build" $folder))
+      if (!(Get-Dir $output $folder))
       {
-        New-Item -Path ./build -Name $folder -ItemType Directory 
+        New-Item -Path "$output/$folder"  -ItemType Directory 
       }
       
-      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='MinSizeRel' -S $source_dir -B $output_dir/$folder"
+      $command = "cmake $genorator -DCMAKE_BUILD_TYPE='MinSizeRel' -S $source_dir -B $output/$folder $tools $version"
       Invoke-Expression $command
     }
   } 
@@ -133,12 +168,12 @@ function New-Project($Type)
 
 function Build-Project($Type,$Run)
 {
-  $command
+  $output = $Global:Settings.output 
   switch ($Type.ToLower())
   {
     $mode['d']
     {
-      $command = "cmake --build ./build/Debug" 
+      $command = "cmake --build $output/Debug" 
       Invoke-Expression $command
       if ($Run)
       {

@@ -2,10 +2,13 @@
   {
     "output": "./build",
     "source": "./",
-    "c_compiler": "Clang",
-    "cxx_compiler": "Clang",
-    "linker": "$env:LLVM_ROOT",
-    "genorator": "Ninja",
-    "exe_name": "PlayGround"
+    "c_version": "",
+    "cxx_version": "",
+    "c_compiler": "",
+    "cxx_compiler": "",
+    "linker": "",
+    "genorator": "",
+    "exe_name": "PlayGround",
+    "CPM_CACHE": ""
   }
 ]
