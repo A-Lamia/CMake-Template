@@ -84,33 +84,43 @@ function Initialize-Project()
 function Redo-Project($Type)
 {
   $output = $Global:Settings.output
-  
+
   switch ($Type.ToLower())
   {
-    "project"
-    {
-      $command = "Remove-Item $output/*"
-      Invoke-Expression $command
-    }
+
     $mode["d"]
     {
-      $command = "Remove-Item $output/Debug/*"
+      $command = "Remove-Item $output/Debug -Force -Recurse"
+      if(Test-Path "$output/compile_commands.json")
+      {
+        Remove-Item "$output/compile_commands.json"
+      }
       Invoke-Expression $command
+      exit
     }
     $mode["rd"]
     {
-      $command = "Remove-Item $output/Release_Debug/*"
+      $command = "Remove-Item $output/Release_Debug -Force -Recurse"
       Invoke-Expression $command
+      exit
     }
     $mode["r"]
     {
-      $command = "Remove-Item $output/Release/*"
+      $command = "Remove-Item $output/Release -Force -Recurse"
       Invoke-Expression $command
+      exit
     }
     $mode["rm"]
     {
-      $command = "Remove-Item $output/Release_Mini/*"
+      $command = "Remove-Item $output/Release_Mini -Force -Recurse"
       Invoke-Expression $command
+      exit
+    }
+    DEFAULT
+    {
+      $command = "Remove-Item $output -Force -Recurse"
+      Invoke-Expression $command
+      exit
     }
   }  
 }
@@ -118,6 +128,7 @@ function Redo-Project($Type)
 
 function New-Project($Type)
 {
+  
   $source_dir = $Global:settings.source
   $output = $Global:settings.output
   
@@ -133,7 +144,19 @@ function New-Project($Type)
   $genorator = ($Global:settings.genorator -ne "" ) ? ("-G " + $Global:settings.genorator) : ""
   Write-Host $Global:settings.c_version
   
-  $command 
+  
+  function Set-CompileCommands($dir)
+  {
+    
+    $root_dir = (Get-Location).Path
+    $routput = $output.replace("./", "")
+    
+    if (!(Test-Path "$output/compile_commands.json") -and (Test-Path "$output/$dir/compile_commands.json"))
+    {
+      New-Item -ItemType HardLink -path "$root_dir/$routput/compile_commands.json" -target "$root_dir/$routput/$dir/compile_commands.json"
+    }
+  }
+
   switch ($Type.ToLower())
   {
     $mode['d']  
@@ -145,8 +168,9 @@ function New-Project($Type)
       }
       
       $command = "cmake $genorator -S $source_dir -B $output/$folder $tools $version"
-      Write-Host $command
       Invoke-Expression $command
+      Set-CompileCommands $folder
+      exit
     }
     
     $mode['rd']
@@ -264,21 +288,25 @@ function Open-Executable($Type)
     {
       $command = Get-Path "Debug"     
       Invoke-Expression $command
+      exit
     }
     $mode['rd']
     {
       $command = Get-Path "Release-Debug"     
       Invoke-Expression $command
+      exit
     }
     $mode['r']
     {
       $command = Get-Path "Release"     
       Invoke-Expression $command
+      exit
     }
     $mode['rm']
     {
       $command = Get-Path "Release-Mini"     
       Invoke-Expression $command
+      exit
     }
       
   } 
@@ -292,21 +320,26 @@ switch ($Action.ToLower())
   "init"
   {
     Initialize-Project 
+    exit
   }
   "clean"
   {
     Redo-Project $Type
+    exit
   }
   "create"
   {
     New-Project $Type
+    exit
   }
   "build"
   {
     Build-Project $Type $Run
+    exit
   }
   "run"
   {
     Open-Executable $Type
+    exit
   }
 }
